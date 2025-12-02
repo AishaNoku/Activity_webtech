@@ -1,12 +1,7 @@
 <?php
 include 'db.php';
-
-// =============================================
-// FACULTY_DASHBOARD.PHP - Faculty Dashboard
-// =============================================
 require_once 'config.php';
 
-// Require login and check role
 require_login();
 if ($_SESSION['role'] !== 'faculty') {
     header("Location: student_dashboard.php");
@@ -18,13 +13,11 @@ $user_id = $_SESSION['user_id'];
 $message = '';
 $error = '';
 
-// Handle course creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_course'])) {
     $course_code = sanitize_input($_POST['course_code'] ?? '');
     $course_name = sanitize_input($_POST['course_name'] ?? '');
     $schedule = sanitize_input($_POST['schedule'] ?? '');
-    
-    // Validation with regex
+
     if (!preg_match('/^[A-Z]{2,4}\d{3,4}$/', $course_code)) {
         $error = "Course code must be 2-4 letters followed by 3-4 digits (e.g., CS101)";
     } elseif (!preg_match('/^[a-zA-Z0-9\s\-\&]{5,150}$/', $course_name)) {
@@ -42,13 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_course'])) {
     }
 }
 
-// Handle enrollment request approval/rejection
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['handle_request'])) {
     $request_id = intval($_POST['request_id']);
     $action = $_POST['action'] === 'approve' ? 'approved' : 'rejected';
     
-    // Verify the request belongs to a course owned by this faculty
-    $stmt = $conn->prepare("
+     $stmt = $conn->prepare("
         UPDATE enrollment_requests er 
         JOIN courses c ON er.course_id = c.id 
         SET er.status = ?, er.responded_at = NOW() 
@@ -63,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['handle_request'])) {
     $stmt->close();
 }
 
-// Fetch faculty's courses
 $stmt = $conn->prepare("
     SELECT c.*, 
            (SELECT COUNT(*) FROM enrollment_requests WHERE course_id = c.id AND status = 'approved') as student_count
@@ -76,7 +66,6 @@ $stmt->execute();
 $courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Fetch pending enrollment requests
 $stmt = $conn->prepare("
     SELECT er.*, u.full_name, u.email, c.course_code, c.course_name 
     FROM enrollment_requests er
@@ -132,7 +121,6 @@ $conn->close();
             <button class="tab" onclick="showTab('create')">Create Course</button>
         </div>
 
-        <!-- My Courses Tab -->
         <div id="courses" class="tab-content active">
             <?php if (empty($courses)): ?>
                 <div class="empty-state">
@@ -154,7 +142,6 @@ $conn->close();
             <?php endif; ?>
         </div>
 
-        <!-- Enrollment Requests Tab -->
         <div id="requests" class="tab-content">
             <?php if (empty($pending_requests)): ?>
                 <div class="empty-state">
@@ -184,8 +171,6 @@ $conn->close();
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
-
-        <!-- Create Course Tab -->
         <div id="create" class="tab-content">
             <div class="card">
                 <h3>Create New Course</h3>
@@ -218,7 +203,6 @@ $conn->close();
 
     <script>
         function showTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -226,7 +210,6 @@ $conn->close();
                 tab.classList.remove('active');
             });
             
-            // Show selected tab
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
         }

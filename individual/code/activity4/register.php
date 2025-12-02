@@ -2,7 +2,7 @@
 include 'db.php';
 require_once 'config.php';
 
-// Redirect if already logged in
+
 if (is_logged_in()) {
     redirect_to_dashboard();
 }
@@ -11,10 +11,9 @@ $errors = [];
 $success = '';
 $form_data = ['full_name' => '', 'email' => '', 'role' => 'student'];
 
-// Process registration form
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn = getDBConnection();
-    
+
     // Get and sanitize inputs
     $form_data['full_name'] = sanitize_input($_POST['full_name'] ?? '');
     $form_data['email'] = sanitize_input($_POST['email'] ?? '');
@@ -22,22 +21,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
     
-    // Server-side validation with regex
     
-    // Full name validation (letters, spaces, hyphens, 2-100 chars)
+   
     if (empty($form_data['full_name'])) {
         $errors[] = "Full name is required";
     } elseif (!preg_match('/^[a-zA-Z\s\-]{2,100}$/', $form_data['full_name'])) {
         $errors[] = "Full name must contain only letters, spaces, and hyphens (2-100 characters)";
     }
     
-    // Email validation
     if (empty($form_data['email'])) {
         $errors[] = "Email is required";
     } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $form_data['email'])) {
         $errors[] = "Invalid email format";
     } else {
-        // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->bind_param("s", $form_data['email']);
         $stmt->execute();
@@ -47,26 +43,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->close();
     }
     
-    // Password validation (min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char)
     if (empty($password)) {
         $errors[] = "Password is required";
     } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $password)) {
         $errors[] = "Password must be at least 8 characters with uppercase, lowercase, number, and special character";
     }
     
-    // Confirm password
     if ($password !== $confirm_password) {
         $errors[] = "Passwords do not match";
     }
-    
-    // Role validation
     if (!in_array($form_data['role'], ['student', 'faculty'])) {
         $errors[] = "Invalid role selected";
     }
     
-    // If no errors, register the user
     if (empty($errors)) {
-        // Hash password securely
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         
         $stmt = $conn->prepare("INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)");
@@ -163,11 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-        // Client-side validation with regex
         document.getElementById('registerForm').addEventListener('submit', function(e) {
             let isValid = true;
             
-            // Name validation
             const name = document.getElementById('full_name').value.trim();
             const nameRegex = /^[a-zA-Z\s\-]{2,100}$/;
             const nameError = document.getElementById('nameError');
@@ -183,8 +171,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 nameError.style.display = 'none';
             }
-            
-            // Email validation
             const email = document.getElementById('email').value.trim();
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             const emailError = document.getElementById('emailError');
@@ -200,8 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 emailError.style.display = 'none';
             }
-            
-            // Password validation
+        
             const password = document.getElementById('password').value;
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
             const passwordError = document.getElementById('passwordError');
@@ -217,8 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 passwordError.style.display = 'none';
             }
-            
-            // Confirm password
+        
             const confirmPassword = document.getElementById('confirm_password').value;
             const confirmError = document.getElementById('confirmError');
             

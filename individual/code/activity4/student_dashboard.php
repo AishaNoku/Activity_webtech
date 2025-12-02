@@ -2,7 +2,6 @@
 include 'db.php';
 require_once 'config.php';
 
-// Require login and check role
 require_login();
 if ($_SESSION['role'] !== 'student') {
     header("Location: faculty_dashboard.php");
@@ -13,12 +12,10 @@ $conn = getDBConnection();
 $user_id = $_SESSION['user_id'];
 $message = '';
 $error = '';
-
-// Handle course join request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_join'])) {
     $course_id = intval($_POST['course_id']);
     
-    // Check if request already exists
+    
     $stmt = $conn->prepare("SELECT id FROM enrollment_requests WHERE student_id = ? AND course_id = ?");
     $stmt->bind_param("ii", $user_id, $course_id);
     $stmt->execute();
@@ -39,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_join'])) {
     $stmt->close();
 }
 
-// Fetch enrolled courses (approved requests)
 $stmt = $conn->prepare("
     SELECT c.*, u.full_name as faculty_name,
            (SELECT COUNT(*) FROM enrollment_requests WHERE course_id = c.id AND status = 'approved') as student_count
@@ -54,7 +50,6 @@ $stmt->execute();
 $enrolled_courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Fetch pending requests
 $stmt = $conn->prepare("
     SELECT c.*, u.full_name as faculty_name, er.status, er.requested_at
     FROM courses c
@@ -66,10 +61,7 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $pending_requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
-
-// Fetch available courses (not yet requested or enrolled)
-$stmt = $conn->prepare("
+$stmt->close();$stmt = $conn->prepare("
     SELECT c.*, u.full_name as faculty_name,
            (SELECT COUNT(*) FROM enrollment_requests WHERE course_id = c.id AND status = 'approved') as student_count
     FROM courses c
@@ -174,8 +166,6 @@ $conn->close();
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- Available Courses Tab -->
         <div id="available" class="tab-content">
             <h2 class="section-title">Available Courses</h2>
             <?php if (empty($available_courses)): ?>
@@ -206,7 +196,6 @@ $conn->close();
 
     <script>
         function showTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -214,7 +203,6 @@ $conn->close();
                 tab.classList.remove('active');
             });
             
-            // Show selected tab
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
         }
