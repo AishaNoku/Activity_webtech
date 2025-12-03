@@ -1,12 +1,6 @@
 <?php
-include 'db.php';
-
-// =============================================
-// FACULTY_DASHBOARD.PHP - Faculty Dashboard
-// =============================================
 require_once 'config.php';
 
-// Require login and check role
 require_login();
 if ($_SESSION['role'] !== 'faculty') {
     header("Location: student_dashboard.php");
@@ -18,13 +12,11 @@ $user_id = $_SESSION['user_id'];
 $message = '';
 $error = '';
 
-// Handle course creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_course'])) {
     $course_code = sanitize_input($_POST['course_code'] ?? '');
     $course_name = sanitize_input($_POST['course_name'] ?? '');
     $schedule = sanitize_input($_POST['schedule'] ?? '');
     
-    // Validation with regex
     if (!preg_match('/^[A-Z]{2,4}\d{3,4}$/', $course_code)) {
         $error = "Course code must be 2-4 letters followed by 3-4 digits (e.g., CS101)";
     } elseif (!preg_match('/^[a-zA-Z0-9\s\-\&]{5,150}$/', $course_name)) {
@@ -41,14 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_course'])) {
         $stmt->close();
     }
 }
-
-// Handle enrollment request approval/rejection
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['handle_request'])) {
     $request_id = intval($_POST['request_id']);
     $action = $_POST['action'] === 'approve' ? 'approved' : 'rejected';
     
-    // Verify the request belongs to a course owned by this faculty
-    $stmt = $conn->prepare("
+     $stmt = $conn->prepare("
         UPDATE enrollment_requests er 
         JOIN courses c ON er.course_id = c.id 
         SET er.status = ?, er.responded_at = NOW() 
@@ -63,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['handle_request'])) {
     $stmt->close();
 }
 
-// Fetch faculty's courses
 $stmt = $conn->prepare("
     SELECT c.*, 
            (SELECT COUNT(*) FROM enrollment_requests WHERE course_id = c.id AND status = 'approved') as student_count
@@ -75,8 +63,6 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
-
-// Fetch pending enrollment requests
 $stmt = $conn->prepare("
     SELECT er.*, u.full_name, u.email, c.course_code, c.course_name 
     FROM enrollment_requests er
@@ -92,20 +78,250 @@ $stmt->close();
 
 $conn->close();
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="faculty.css">
     <title>Faculty Dashboard - Ashesi Attendance System</title>
-
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: #8B1538;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar h1 {
+            font-size: 22px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #1a1a2e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -12px;
+        }
+        .tab.active {
+            color: #8B1538;
+            border-bottom-color: #8B1538;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .message {
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .card h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #8B1538;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #8B1538;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #6d1029;
+        }
+        .btn-approve {
+            background: #2e7d32;
+        }
+        .btn-approve:hover {
+            background: #1b5e20;
+        }
+        .btn-reject {
+            background: #c62828;
+        }
+        .btn-reject:hover {
+            background: #b71c1c;
+        }
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .course-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .course-code {
+            color: #8B1538;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .course-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .course-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+        }
+        .request-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .request-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .request-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        .request-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <h1>Ashesi Attendance System</h1>
+        <div style="display: flex; gap: 20px; align-items: center;">
+            <a href="faculty_dashboard.php" style="color: white; text-decoration: none;">Dashboard</a>
+            <a href="class_sessions.php" style="color: white; text-decoration: none;">Class Sessions</a>
+            <a href="reports.php" style="color: white; text-decoration: none;">Reports</a>
+        </div>
         <div class="user-info">
             <span><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
             <div class="user-avatar"><?php echo get_initials($_SESSION['full_name']); ?></div>
@@ -132,7 +348,6 @@ $conn->close();
             <button class="tab" onclick="showTab('create')">Create Course</button>
         </div>
 
-        <!-- My Courses Tab -->
         <div id="courses" class="tab-content active">
             <?php if (empty($courses)): ?>
                 <div class="empty-state">
@@ -153,8 +368,6 @@ $conn->close();
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- Enrollment Requests Tab -->
         <div id="requests" class="tab-content">
             <?php if (empty($pending_requests)): ?>
                 <div class="empty-state">
@@ -185,7 +398,6 @@ $conn->close();
             <?php endif; ?>
         </div>
 
-        <!-- Create Course Tab -->
         <div id="create" class="tab-content">
             <div class="card">
                 <h3>Create New Course</h3>

@@ -3,7 +3,6 @@ include 'db.php';
 
 require_once 'config.php';
 
-// Redirect if already logged in
 if (is_logged_in()) {
     redirect_to_dashboard();
 }
@@ -11,18 +10,14 @@ if (is_logged_in()) {
 $error = '';
 $email = '';
 
-// Process login form
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn = getDBConnection();
-    
-    // Get and sanitize inputs
+
     $email = sanitize_input($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    
-    // Server-side validation
+
     $errors = [];
-    
-    // Email validation with regex
+
     if (empty($email)) {
         $errors[] = "Email is required";
     } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $email)) {
@@ -34,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (empty($errors)) {
-        // Prepare statement to prevent SQL injection
         $stmt = $conn->prepare("SELECT id, full_name, email, password, role FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -43,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             
-            // Verify password
             if (password_verify($password, $user['password'])) {
                 // Set session variables
                 $_SESSION['user_id'] = $user['id'];
@@ -51,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['role'] = $user['role'];
                 
-                // Redirect to appropriate dashboard
                 redirect_to_dashboard();
             } else {
                 $error = "Invalid email or password";
@@ -111,13 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-        // Client-side validation
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             let isValid = true;
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             
-            // Email regex validation
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             const emailError = document.getElementById('emailError');
             
@@ -133,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 emailError.style.display = 'none';
             }
             
-            // Password validation
             const passwordError = document.getElementById('passwordError');
             if (!password) {
                 passwordError.textContent = 'Password is required';

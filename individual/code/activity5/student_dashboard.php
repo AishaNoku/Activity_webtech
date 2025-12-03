@@ -1,8 +1,6 @@
 <?php
-include 'db.php';
 require_once 'config.php';
 
-// Require login and check role
 require_login();
 if ($_SESSION['role'] !== 'student') {
     header("Location: faculty_dashboard.php");
@@ -14,11 +12,9 @@ $user_id = $_SESSION['user_id'];
 $message = '';
 $error = '';
 
-// Handle course join request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_join'])) {
     $course_id = intval($_POST['course_id']);
     
-    // Check if request already exists
     $stmt = $conn->prepare("SELECT id FROM enrollment_requests WHERE student_id = ? AND course_id = ?");
     $stmt->bind_param("ii", $user_id, $course_id);
     $stmt->execute();
@@ -39,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_join'])) {
     $stmt->close();
 }
 
-// Fetch enrolled courses (approved requests)
 $stmt = $conn->prepare("
     SELECT c.*, u.full_name as faculty_name,
            (SELECT COUNT(*) FROM enrollment_requests WHERE course_id = c.id AND status = 'approved') as student_count
@@ -54,7 +49,6 @@ $stmt->execute();
 $enrolled_courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Fetch pending requests
 $stmt = $conn->prepare("
     SELECT c.*, u.full_name as faculty_name, er.status, er.requested_at
     FROM courses c
@@ -68,7 +62,6 @@ $stmt->execute();
 $pending_requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Fetch available courses (not yet requested or enrolled)
 $stmt = $conn->prepare("
     SELECT c.*, u.full_name as faculty_name,
            (SELECT COUNT(*) FROM enrollment_requests WHERE course_id = c.id AND status = 'approved') as student_count
@@ -86,19 +79,205 @@ $stmt->close();
 
 $conn->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="student.css">
     <title>Student Dashboard - Ashesi Attendance System</title>
-    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        .navbar {
+            background: #8B1538;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar h1 {
+            font-size: 22px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #1a1a2e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -12px;
+        }
+        .tab.active {
+            color: #8B1538;
+            border-bottom-color: #8B1538;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .message {
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .course-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .course-code {
+            color: #8B1538;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .course-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .course-faculty {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .course-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #8B1538;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+        }
+        .btn:hover {
+            background: #6d1029;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-enrolled {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .badge-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .badge-rejected {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .section-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .pending-card {
+            background: #fff3e0;
+            border-left: 4px solid #e65100;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <h1>Ashesi Attendance System</h1>
+        <div style="display: flex; gap: 20px; align-items: center;">
+            <a href="student_dashboard.php" style="color: white; text-decoration: none;">Dashboard</a>
+            <a href="mark_attendance.php" style="color: white; text-decoration: none;">Mark Attendance</a>
+            <a href="student_reports.php" style="color: white; text-decoration: none;">My Reports</a>
+        </div>
         <div class="user-info">
             <span><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
             <div class="user-avatar"><?php echo get_initials($_SESSION['full_name']); ?></div>
@@ -124,8 +303,6 @@ $conn->close();
             </button>
             <button class="tab" onclick="showTab('available')">Browse Courses</button>
         </div>
-
-        <!-- Enrolled Courses Tab -->
         <div id="enrolled" class="tab-content active">
             <h2 class="section-title">Enrolled Courses</h2>
             <?php if (empty($enrolled_courses)): ?>
@@ -150,8 +327,6 @@ $conn->close();
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- Pending Requests Tab -->
         <div id="pending" class="tab-content">
             <h2 class="section-title">Pending Enrollment Requests</h2>
             <?php if (empty($pending_requests)): ?>
@@ -175,7 +350,6 @@ $conn->close();
             <?php endif; ?>
         </div>
 
-        <!-- Available Courses Tab -->
         <div id="available" class="tab-content">
             <h2 class="section-title">Available Courses</h2>
             <?php if (empty($available_courses)): ?>
@@ -206,7 +380,6 @@ $conn->close();
 
     <script>
         function showTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -214,7 +387,6 @@ $conn->close();
                 tab.classList.remove('active');
             });
             
-            // Show selected tab
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
         }

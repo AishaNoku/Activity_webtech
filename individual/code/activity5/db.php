@@ -1,13 +1,15 @@
 <?php
 $host = "localhost";
-$user = "root";     // default XAMPP MySQL user
-$pass = "";         // default XAMPP password is empty
+$user = "root"; 
+$port = '3307';  
+$pass = "";       
 $dbname = "ashesi_attendance";
 
-$conn = new mysqli($host, $user, $pass, $dbname);
+$conn = new mysqli($host, $user, $pass, $dbname,$port);
 
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 ?>
+
+
