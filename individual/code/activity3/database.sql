@@ -1,0 +1,13 @@
+CREATE DATABASE IF NOT EXISTS attendanceAshesi;
+USE attendanceAshesi;
+
+CREATE TABLE IF NOT EXISTS students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    student_id VARCHAR(20) NOT NULL UNIQUE,
+    program VARCHAR(100) NOT NULL,
+    year_of_study INT NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
