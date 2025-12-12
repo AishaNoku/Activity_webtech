@@ -2,7 +2,6 @@
 include 'db.php';
 require_once 'config.php';
 
-// Redirect if already logged in
 if (is_logged_in()) {
     redirect_to_dashboard();
 }
@@ -31,7 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $form_data['email'])) {
         $errors[] = "Invalid email format";
     } else {
-        // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->bind_param("s", $form_data['email']);
         $stmt->execute();

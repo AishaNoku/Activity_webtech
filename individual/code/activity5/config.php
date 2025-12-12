@@ -7,10 +7,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PORT', '3307');
-define('DB_PASS', '');
-define('DB_NAME', 'ashesi_attendance');
+define('DB_USER', 'aisha.chihuri');
+define('DB_PORT', '3306');
+define('DB_PASS', 'RGMugabe2027');
+define('DB_NAME', '"webtech_2025A_aisha_chihuri');
 
 function getDBConnection() {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME,DB_PORT );

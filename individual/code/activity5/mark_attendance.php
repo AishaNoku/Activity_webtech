@@ -18,7 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
     if (!preg_match('/^\d{6}$/', $attendance_code)) {
         $error = "Invalid code format. Code must be 6 digits.";
     } else {
-        // Find the session with this code
         $stmt = $conn->prepare("
             SELECT cs.id, cs.course_id, c.course_code, c.course_name, cs.session_date
             FROM class_sessions cs
@@ -35,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
             $session = $result->fetch_assoc();
             $stmt->close();
             
-            // Check if student is enrolled in this course
             $stmt = $conn->prepare("
                 SELECT id FROM enrollment_requests 
                 WHERE student_id = ? AND course_id = ? AND status = 'approved'
@@ -48,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_attendance'])) {
             } else {
                 $stmt->close();
                 
-                // Check if already marked attendance
                 $stmt = $conn->prepare("
                     SELECT id FROM attendance 
                     WHERE session_id = ? AND student_id = ?

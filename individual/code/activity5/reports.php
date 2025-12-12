@@ -1,7 +1,4 @@
 <?php
-// =============================================
-// REPORTS.PHP - Faculty Attendance Reports
-// =============================================
 require_once 'config.php';
 
 require_login();
@@ -13,21 +10,18 @@ if ($_SESSION['role'] !== 'faculty') {
 $conn = getDBConnection();
 $user_id = $_SESSION['user_id'];
 
-// Fetch faculty courses
 $stmt = $conn->prepare("SELECT id, course_code, course_name FROM courses WHERE faculty_id = ? ORDER BY course_code");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $courses = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Get selected course
 $selected_course = isset($_GET['course_id']) ? intval($_GET['course_id']) : (count($courses) > 0 ? $courses[0]['id'] : 0);
 
 $course_report = [];
 $session_details = [];
 
 if ($selected_course > 0) {
-    // Fetch course attendance summary
     $stmt = $conn->prepare("
         SELECT 
             u.id,
@@ -49,7 +43,6 @@ if ($selected_course > 0) {
     $course_report = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
     
-    // Fetch session details
     $stmt = $conn->prepare("
         SELECT 
             cs.id,
