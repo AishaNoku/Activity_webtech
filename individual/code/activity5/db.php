@@ -1,9 +1,9 @@
 <?php
 $host = "localhost";
-$user = "root"; 
-$port = '3307';  
-$pass = "";       
-$dbname = "ashesi_attendance";
+$user = "aisha.chihuri"; 
+$port = '3306';  
+$pass = "RGMugabe2027";       
+$dbname = "webtech_2025A_aisha_chihuri";
 
 $conn = new mysqli($host, $user, $pass, $dbname,$port);
 
